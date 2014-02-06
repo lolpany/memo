@@ -23,7 +23,7 @@ function Memo() {
     this.ZOOM_KEYBOARD_FACTOR = 1.2;
     this.ZOOM_MOUSE_FACTOR = 1.2 * 1 / 120;
     this.ZOOM_TIME = 100;
-    // nodes and connections drawing
+    // nodes and relationships drawing
 	this.NODE_MIN_WIDTH = 120;
 	this.NODE_MIN_HEIGHT = 40;
     this.NODE_STROKE_COLOR = "rgb(124, 191, 0)";
@@ -66,22 +66,24 @@ function Memo() {
     this.maxX = 0;
     this.maxY = 0;
     //
-    this.focusedNode = null;
-    this.focusedConnection = null;
-    this.ctrlPressedOnMouseDown = false;
+//    this.focusedNode = null;
+//    this.focusedConnection = null;
+    this.ctrlPres2sedOnMouseDown = false;
     this.selection = [];
+    this.selectedNodes = {};
+    this.selectedRelationships = {};
     this.selectedElements = [];
     this.lastGrippedNode = null;
     this.connectionBeginElement = null;
     // drawing entities
     this.nodes = {};
-    this.connections = {};
+    this.relationships = {};
     this.adjacencyMatrix = {};
     // serializable fields
     this.lastNodeId = 1;
     this.lastConnectionId = 1;
     this.serializableNodes = {};
-    this.serializableConnections = {};
+    this.serializableRelationships = {};
     // self
     var self = this;
     //
@@ -119,13 +121,13 @@ function Memo() {
             case self.DRAG_NODE_MOUSE_BUTTON:
                 if (ctrlKey) {
                     if (clickedElement) {
-                        self.selectedElements.push(clickedElement);
+                        self.addSelectedNode(clickedElement);
                     } else {
                         self.ctrlPressedOnMouseDown = true;
                         self.selection.push({x: x, y: y});
                     }
                 } else if (!clickedElement) {
-                    self.clearFocusedNode();
+                    self.clearSelection();
                     self.dragView = true;
                 }
                 break;
@@ -151,8 +153,8 @@ function Memo() {
                             break;
                     }
                 } else {
-                    self.clearFocusedNode();
-                    self.clearFocusedConnection();
+                    self.clearSelection();
+//                    self.clearFocusedConnection();
                 }
                 break;
         }
@@ -178,9 +180,10 @@ function Memo() {
                         var bbox = node.getBBox();
                         if (Raphael.isPointInsidePath(pathString, bbox.x, bbox.y) && Raphael.isPointInsidePath(pathString, bbox.x, bbox.y2)
                             && Raphael.isPointInsidePath(pathString, bbox.x2, bbox.y) && Raphael.isPointInsidePath(pathString, bbox.x2, bbox.y2)) {
-                            self.selectedElements.push(node);
-                            node.attr({stroke: self.NODE_FOCUSED_STROKE_COLOR});
-                            node.text.attr({stroke: self.NODE_FOCUSED_STROKE_COLOR, "fill": self.NODE_FOCUSED_STROKE_COLOR});
+                            self.addSelectedNode(node);
+//                            self.selectedElements.push(node);
+//                            node.attr({stroke: self.NODE_FOCUSED_STROKE_COLOR});
+//                            node.text.attr({stroke: self.NODE_FOCUSED_STROKE_COLOR, "fill": self.NODE_FOCUSED_STROKE_COLOR});
                         }
                     }
                     self.selection = [];
@@ -260,41 +263,53 @@ function Memo() {
     // keyboard
     window.onkeydown = function (e) {
         var result = true;
-        var text = "";
-        if (self.getFocusedNode()) {
-            text = self.getFocusedNode().text.attr("text");
-        } else if (self.getFocusedConnection()) {
-            text = self.getFocusedConnection().text.attr("text");
-        }
+//        var text = "";
+//        if (self.getFocusedNode()) {
+//            text = self.getFocusedNode().text.attr("text");
+//        } else if (self.getFocusedConnection()) {
+//            text = self.getFocusedConnection().text.attr("text");
+//        }
         switch (e.keyCode) {
             // backspace
             case 8:
-                if (self.focusedNode) {
-                    self.focusedNode.text.attr({text: text.substring(0, text.length - 1)});
-                    self.serializableNodes[self.focusedNode.data("id")].text = text.substring(0, text.length - 1);
-                    result = false;
-                } else if (self.getFocusedConnection()) {
-                    self.focusedConnection.text.attr({text: text.substring(0, text.length - 1)});
-                    self.serializableConnections[self.focusedConnection.path.data("id")].text = text.substring(0, text.length - 1);
+                for (var nodeId in self.selectedNodes) {
+                    var nodeText = self.selectedNodes[nodeId].text.attr("text");
+                    self.selectedNodes[nodeId].text.attr({text: nodeText.substring(0, nodeText.length - 1)});
+                    self.serializableNodes[nodeId].text = nodeText.substring(0, nodeText.length - 1);
+                }
+                for (var relId in self.selectedRelationships) {
+                    var relText = self.selectedRelationships[relId].text.attr("text");
+                    self.selectedRelationships[relId].text.attr({text: relText.substring(0, relText.length - 1)});
+                    self.serializableRelationships[relId].text = relText.substring(0, relText.length - 1);
+                }
+                if (!isEmpty(self.selectedNodes) || !isEmpty(self.selectedRelationships)) {
                     result = false;
                 }
                 break;
             // enter
             case 13:
-                if (self.focusedNode) {
-                    self.focusedNode.text.attr({text: text + "\n"});
-                    self.serializableNodes[self.focusedNode.data("id")].text = text + "\n";
-                } else if (self.focusedConnection) {
-                    self.focusedConnection.text.attr({text: text + "\n"});
-                    self.serializableConnections[self.focusedConnection.path.data("id")].text = text + "\n";
+                for (var nodeId in self.selectedNodes) {
+                    var nodeText = self.selectedNodes[nodeId].text.attr("text");
+                    self.selectedNodes[nodeId].text.attr({text: nodeText + "\n"});
+                    self.serializableNodes[nodeId].text = nodeText + "\n";
                 }
+                for (var relId in self.selectedRelationships) {
+                    var relText = self.selectedRelationships[relId].text.attr("text");
+                    self.selectedRelationships[relId].text.attr({text: relText + "\n"});
+                    self.serializableRelationships[relId].text = relText + "\n";
+                }
+//                if (self.focusedNode) {
+//                    self.focusedNode.text.attr({text: text + "\n"});
+//                    self.serializableNodes[self.focusedNode.data("id")].text = text + "\n";
+//                } else if (self.focusedConnection) {
+//                    self.focusedConnection.text.attr({text: text + "\n"});
+//                    self.serializableRelationships[self.focusedConnection.path.data("id")].text = text + "\n";
+//                }
                 break;
             // escape
             case 27:
-                if (self.focusedNode) {
-                    self.clearFocusedNode();
-                    self.clearFocusedConnection();
-                }
+                    self.clearSelection();
+//                    self.clearFocusedConnection();
                 break;
             // left arrow
             case 37:
@@ -314,35 +329,39 @@ function Memo() {
                 break;
             // delete
             case 46:
-                if (self.focusedNode) {
-                    self.focusedNode.text.attr({text: ""});
-                    self.serializableNodes[self.focusedNode.data("id")].text = "";
-                } else if (self.getFocusedConnection()) {
-                    self.getFocusedConnection().text.attr({text: ""});
-                    self.serializableConnections[self.focusedConnection.path.data("id")].text = "";
+                for (var nodeId in self.selectedNodes) {
+                    self.selectedNodes[nodeId].text.attr({text: ""});
+                    self.serializableNodes[nodeId].text = "";
                 }
+                for (var relId in self.selectedRelationships) {
+                    self.selectedRelationships[relId].text.attr({text: ""});
+                    self.serializableRelationships[relId].text = "";
+                }
+//                if (self.focusedNode) {
+//                    self.focusedNode.text.attr({text: ""});
+//                    self.serializableNodes[self.focusedNode.data("id")].text = "";
+//                } else if (self.getFocusedConnection()) {
+//                    self.getFocusedConnection().text.attr({text: ""});
+//                    self.serializableRelationships[self.focusedConnection.path.data("id")].text = "";
+//                }
                 break;
         }
-        if (self.focusedNode) {
-            self.updateNodeSize(self.focusedNode);
+        for (var nodeId in self.selectedNodes) {
+            self.updateNodeSize(self.selectedNodes[nodeId]);
         }
         return result;
     };
     window.onkeypress = function (e) {
-        if (self.focusedNode) {
-            switch (e.keyCode) {
-                default:
-                    self.focusedNode.text.attr({text: self.focusedNode.text.attr("text") + String.fromCharCode(e.keyCode)});
-                    self.serializableNodes[self.focusedNode.data("id")].text = self.focusedNode.text.attr("text");
-                    break;
+        if (!isEmpty(self.selectedNodes) || !isEmpty(self.selectedRelationships)) {
+            for (var nodeId in self.selectedNodes) {
+                var nodeText = self.selectedNodes[nodeId].text.attr("text") + String.fromCharCode(e.keyCode);
+                self.selectedNodes[nodeId].text.attr({text: nodeText});
+                self.serializableNodes[nodeId].text = nodeText;
             }
-            self.updateNodeSize(self.focusedNode);
-        } else if (self.getFocusedConnection()) {
-            switch (e.keyCode) {
-                default:
-                    self.focusedConnection.text.attr({text: self.focusedConnection.text.attr("text") + String.fromCharCode(e.keyCode)});
-                    self.serializableConnections[self.focusedConnection.path.data("id")].text = self.focusedConnection.text.attr("text");
-                    break;
+            for (var relId in self.selectedRelationships) {
+                var relText = self.selectedRelationships[relId].text.attr("text") + String.fromCharCode(e.keyCode);
+                self.selectedRelationships[relId].text.attr({text: relText});
+                self.serializableRelationships[relId].text = relText;
             }
         } else {
             switch (e.keyCode) {
@@ -361,7 +380,7 @@ function Memo() {
                         lastNodeId: self.lastNodeId,
                         lastConnectionId: self.lastConnectionId,
                         serializableNodes: self.serializableNodes,
-                        serializableConnections: self.serializableConnections
+                        serializableConnections: self.serializableRelationships
                     });
                     var uriContent = "data:application/json;filename=filename.json," + mem;
                     var downloadLink = document.createElement("a");
@@ -426,14 +445,16 @@ Memo.prototype.addNode = function (x, y, id, text) {
     var self = this;
     var moveNode = function (dx, dy, x, y, mouseEvent) {
         if (mouseEvent.button === self.DRAG_NODE_MOUSE_BUTTON) {
-            var attr = {x: this.gripX + self.currentZoom * dx, y: this.gripY + self.currentZoom * dy};
-            this.attr(attr);
-            self.serializableNodes[this.data("id")].x = attr.x;
-            self.serializableNodes[this.data("id")].y = attr.y;
-            var textAttr = {x: this.gripX + this.attr("width") / 2 + self.currentZoom * dx, y: this.gripY + this.attr("height") / 2 + self.currentZoom * dy};
-            this.text.attr(textAttr);
-            for (var connectionId in self.connections) {
-                self.redrawConnection(self.connections[connectionId]);
+            for (var nodeId in self.selectedNodes) {
+                var attr = {x: this.gripX + self.currentZoom * dx, y: this.gripY + self.currentZoom * dy};
+                this.attr(attr);
+                self.serializableNodes[this.data("id")].x = attr.x;
+                self.serializableNodes[this.data("id")].y = attr.y;
+                var textAttr = {x: this.gripX + this.attr("width") / 2 + self.currentZoom * dx, y: this.gripY + this.attr("height") / 2 + self.currentZoom * dy};
+                this.text.attr(textAttr);
+                for (var connectionId in self.relationships) {
+                    self.redrawConnection(self.relationships[connectionId]);
+                }
             }
         }
         if (dx || dy) {
@@ -460,7 +481,8 @@ Memo.prototype.addNode = function (x, y, id, text) {
     node.drag(moveNode, gripNode, releaseNode);
     node.click(function () {
         if (self.getLastGrippedNode() !== this) {
-            self.setFocusedNode(this);
+            self.addSelectedNode(this);
+//            self.selectedNodes[nodeId] = this;
         }
     });
     this.adjacencyMatrix[nodeId] = {};
@@ -474,9 +496,10 @@ Memo.prototype.addNode = function (x, y, id, text) {
     node.text.attr({stroke: this.NODE_STROKE_COLOR, fill: this.NODE_STROKE_COLOR, cursor: "move"});
     node.text.drag(moveNode, gripNode, releaseNode, node, node, node);
     node.text.click(function () {
-        self.setFocusedNode(node);
+        self.selcetedNodes[nodeId] = node;
     });
-    this.setFocusedNode(node);
+//    this.selectedNodes[nodeId] = node;
+    this.addSelectedNode(node);
     this.minX = Math.min(this.minX, node.attr("x"));
     this.minY = Math.min(this.minY, node.attr("y"));
     this.maxX = Math.max(this.maxX, node.attr("x") + node.attr("width"));
@@ -496,9 +519,7 @@ Memo.prototype.removeNode = function (node) {
     var removedNode = null;
     if (removedNodeId) {
         removedNode = this.nodes[removedNodeId];
-        if (removedNode == this.getFocusedNode()) {
-            this.clearFocusedNode();
-        }
+        delete this.selectedNodes[removedNodeId];
         for (var fromNodeId in this.adjacencyMatrix) {
             for (var toNodeId in this.adjacencyMatrix[fromNodeId]) {
                 if ((fromNodeId == removedNodeId) || (toNodeId == removedNodeId)) {
@@ -521,47 +542,58 @@ Memo.prototype.clearNodes = function () {
     }
 };
 
-Memo.prototype.setFocusedNode = function (node) {
-    this.clearFocusedNode();
-    this.clearFocusedConnection();
-    this.focusedNode = node;
-    this.focusedNode.attr({stroke: this.NODE_FOCUSED_STROKE_COLOR});
-    this.focusedNode.text.attr({stroke: this.NODE_FOCUSED_STROKE_COLOR, "fill": this.NODE_FOCUSED_STROKE_COLOR});
+Memo.prototype.addSelectedNode = function (node) {
+    this.selectedNodes[node.data("id")] = node;
+    node.attr({stroke: this.NODE_FOCUSED_STROKE_COLOR});
+    node.text.attr({stroke: this.NODE_FOCUSED_STROKE_COLOR, "fill": this.NODE_FOCUSED_STROKE_COLOR});
 };
 
-Memo.prototype.getFocusedNode = function () {
-    return this.focusedNode;
-};
+//Memo.prototype.setFocusedNode = function (node) {
+//    this.clearSelection();
+//    this.clearFocusedConnection();
+//    this.focusedNode = node;
+//    this.focusedNode.attr({stroke: this.NODE_FOCUSED_STROKE_COLOR});
+//    this.focusedNode.text.attr({stroke: this.NODE_FOCUSED_STROKE_COLOR, "fill": this.NODE_FOCUSED_STROKE_COLOR});
+//};
 
-Memo.prototype.clearFocusedNode = function () {
-    if (this.focusedNode) {
-        this.focusedNode.attr({stroke: this.NODE_STROKE_COLOR});
-        this.focusedNode.text.attr({stroke: this.NODE_STROKE_COLOR, "fill": this.NODE_STROKE_COLOR});
-        this.focusedNode = null;
+//Memo.prototype.getFocusedNode = function () {
+//    return this.focusedNode;
+//};
+
+Memo.prototype.clearSelection = function () {
+    for (var nodeId in this.selectedNodes) {
+        this.selectedNodes[nodeId].attr({stroke: this.NODE_STROKE_COLOR});
+        this.selectedNodes[nodeId].text.attr({stroke: this.NODE_STROKE_COLOR, "fill": this.NODE_STROKE_COLOR});
     }
-};
-
-Memo.prototype.setFocusedConnection = function(connectionId) {
-    this.clearFocusedNode()
-    this.clearFocusedConnection();
-    this.focusedConnection = this.connections[connectionId];
-    this.focusedConnection.path.attr({stroke: this.NODE_FOCUSED_STROKE_COLOR});
-    this.focusedConnection.endCircle.attr({stroke: this.NODE_FOCUSED_STROKE_COLOR, "fill": this.NODE_FOCUSED_STROKE_COLOR});
-    this.focusedConnection.text.attr({stroke: this.NODE_FOCUSED_STROKE_COLOR, "fill": this.NODE_FOCUSED_STROKE_COLOR});
-};
-
-Memo.prototype.clearFocusedConnection = function() {
-    if (this.focusedConnection) {
-        this.focusedConnection.path.attr({stroke: this.CONNECTION_STROKE_COLOR});
-        this.focusedConnection.endCircle.attr({stroke: this.CONNECTION_STROKE_COLOR, "fill": this.CONNECTION_STROKE_COLOR});
-        this.focusedConnection.text.attr({stroke: this.CONNECTION_STROKE_COLOR, "fill": this.CONNECTION_STROKE_COLOR});
-        this.focusedConnection = null;
+    this.selectedNodes = {};
+    for (var relId in this.selectedRelationships) {
+        this.selectedRelationships[relId].attr({stroke: this.NODE_STROKE_COLOR});
+        this.selectedRelationships[relId].text.attr({stroke: this.NODE_STROKE_COLOR, "fill": this.NODE_STROKE_COLOR});
     }
+    this.selectedRelationships = {};
 };
 
-Memo.prototype.getFocusedConnection = function() {
-    return this.focusedConnection;
-};
+//Memo.prototype.setFocusedConnection = function(connectionId) {
+//    this.clearSelection()
+//    this.clearFocusedConnection();
+//    this.focusedConnection = this.relationships[connectionId];
+//    this.focusedConnection.path.attr({stroke: this.NODE_FOCUSED_STROKE_COLOR});
+//    this.focusedConnection.endCircle.attr({stroke: this.NODE_FOCUSED_STROKE_COLOR, "fill": this.NODE_FOCUSED_STROKE_COLOR});
+//    this.focusedConnection.text.attr({stroke: this.NODE_FOCUSED_STROKE_COLOR, "fill": this.NODE_FOCUSED_STROKE_COLOR});
+//};
+
+//Memo.prototype.clearFocusedConnection = function() {
+//    if (this.focusedConnection) {
+//        this.focusedConnection.path.attr({stroke: this.CONNECTION_STROKE_COLOR});
+//        this.focusedConnection.endCircle.attr({stroke: this.CONNECTION_STROKE_COLOR, "fill": this.CONNECTION_STROKE_COLOR});
+//        this.focusedConnection.text.attr({stroke: this.CONNECTION_STROKE_COLOR, "fill": this.CONNECTION_STROKE_COLOR});
+//        this.focusedConnection = null;
+//    }
+//};
+
+//Memo.prototype.getFocusedConnection = function() {
+//    return this.focusedConnection;
+//};
 
 Memo.prototype.updateNodeSize = function (node) {
     var textBBox = node.text.getBBox();
@@ -570,8 +602,8 @@ Memo.prototype.updateNodeSize = function (node) {
     var height = node.attr("height") > textBBox.height ? node.attr("height") : textBBox.height;
     var dy = node.attr("height") > textBBox.height ? 0 : (textBBox.height - node.attr("height")) / 2;
     node.attr({x: node.attr("x") - dx, y: node.attr("y") - dy, width: width, height: height});
-    for (var connectionId in this.connections) {
-        this.redrawConnection(this.connections[connectionId]);
+    for (var connectionId in this.relationships) {
+        this.redrawConnection(this.relationships[connectionId]);
     }
 };
 
@@ -671,7 +703,7 @@ Memo.prototype.drawConnection = function (connectionId, fromNode, toNode, text) 
     var textElement = this.paper.text(textElementPosition.x, textElementPosition.y, text);
     textElement.attr({"stroke": this.CONNECTION_STROKE_COLOR, "fill": this.CONNECTION_STROKE_COLOR, "cursor": "default"});
     textElement.click(function () {
-        self.setFocusedConnection(connectionId);
+        self.selectedRelationships[connectionId] = self.relationships[connectionId];
     });
     return {
         path: pathElement,
@@ -698,18 +730,19 @@ Memo.prototype.addConnection = function (fromNodeId, toNodeId, id, text) {
     }
     var fromNode = this.nodes[fromNodeId];
     var toNode = this.nodes[toNodeId];
-    this.connections[connectionId] = this.drawConnection(connectionId, fromNode, toNode, text);
-    this.connections[connectionId].path.click(function() {
-        self.setFocusedConnection(connectionId);
+    this.relationships[connectionId] = this.drawConnection(connectionId, fromNode, toNode, text);
+    this.relationships[connectionId].path.click(function() {
+        self.selectedRelationships[connectionId] = self.relationships[connectionId];
     });
-    this.serializableConnections[connectionId] = {fromNodeId: fromNodeId, toNodeId: toNodeId, id: connectionId};
+    this.serializableRelationships[connectionId] = {fromNodeId: fromNodeId, toNodeId: toNodeId, id: connectionId};
     this.adjacencyMatrix[fromNodeId][toNodeId] = connectionId;
 };
 
 Memo.prototype.removeConnectionById = function (connectionId) {
-    var removedConnection = this.connections[connectionId];
-    delete this.connections[connectionId];
-    delete this.serializableConnections[connectionId];
+    var removedConnection = this.relationships[connectionId];
+    delete this.relationships[connectionId];
+    delete this.selectedRelationships[connectionId];
+    delete this.serializableRelationships[connectionId];
     delete this.adjacencyMatrix[removedConnection.path.data("fromNodeId")][removedConnection.path.data("toNodeId")];
     removedConnection.path.remove();
     removedConnection.endCircle.remove();
@@ -722,7 +755,7 @@ Memo.prototype.removeConnection = function (connection) {
 };
 
 Memo.prototype.clearConnections = function () {
-    for (var connectionId in this.connections) {
+    for (var connectionId in this.relationships) {
         this.removeConnectionById(connectionId);
     }
 };
@@ -841,7 +874,7 @@ Memo.prototype.fillDocument = function () {
 };
 
 Memo.prototype.loadMem = function(mem) {
-    this.clearFocusedNode();
+    this.clearSelection();
     this.clearLastGrippedNode();
     this.clearNodes();
     this.clearConnections();
@@ -852,11 +885,11 @@ Memo.prototype.loadMem = function(mem) {
         var node = mem.serializableNodes[nodeId];
         this.addNode(node.x, node.y, node.id, node.text);
     }
-    for (var connectionId in mem.serializableConnections) {
-        var connection = mem.serializableConnections[connectionId];
+    for (var connectionId in mem.serializableRelationships) {
+        var connection = mem.serializableRelationships[connectionId];
         this.addConnection(connection.fromNodeId, connection.toNodeId, connection.id, connection.text);
     }
-    this.clearFocusedNode();
+    this.clearSelection();
 };
 
 var memo;
@@ -864,3 +897,12 @@ var memo;
 window.onload = function () {
     memo = new Memo();
 };
+
+function isEmpty(map) {
+    for(var key in map) {
+        if (map.hasOwnProperty(key)) {
+            return false;
+        }
+    }
+    return true;
+}
