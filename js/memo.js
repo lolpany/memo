@@ -365,7 +365,7 @@ function Memo() {
                         lastNodeId: self.lastNodeId,
                         lastConnectionId: self.lastConnectionId,
                         serializableNodes: self.serializableNodes,
-                        serializableConnections: self.serializableRelationships
+                        serializableRelationships: self.serializableRelationships
                     });
                     var uriContent = "data:application/json;filename=filename.json," + mem;
                     var downloadLink = document.createElement("a");
