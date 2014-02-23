@@ -66,13 +66,11 @@ function Memo() {
     this.maxX = 0;
     this.maxY = 0;
     //
-//    this.focusedNode = null;
-//    this.focusedConnection = null;
-    this.ctrlPres2sedOnMouseDown = false;
+    this.ctrlPressedOnMouseDown = false;
     this.selection = [];
     this.selectedNodes = {};
     this.selectedRelationships = {};
-    this.selectedElements = [];
+    // to not select/deselect gripped node
     this.lastGrippedNode = null;
     this.connectionBeginElement = null;
     // drawing entities
@@ -121,7 +119,11 @@ function Memo() {
             case self.DRAG_NODE_MOUSE_BUTTON:
                 if (ctrlKey) {
                     if (clickedElement) {
-                        self.addSelectedNode(clickedElement);
+                        if (self.selectedNodes[clickedElement.data("id")]) {
+                            self.removeSelectedNode(clickedElement);
+                        } else {
+                            self.addSelectedNode(clickedElement);
+                        }
                     } else {
                         self.ctrlPressedOnMouseDown = true;
                         self.selection.push({x: x, y: y});
@@ -154,7 +156,6 @@ function Memo() {
                     }
                 } else {
                     self.clearSelection();
-//                    self.clearFocusedConnection();
                 }
                 break;
         }
@@ -180,10 +181,11 @@ function Memo() {
                         var bbox = node.getBBox();
                         if (Raphael.isPointInsidePath(pathString, bbox.x, bbox.y) && Raphael.isPointInsidePath(pathString, bbox.x, bbox.y2)
                             && Raphael.isPointInsidePath(pathString, bbox.x2, bbox.y) && Raphael.isPointInsidePath(pathString, bbox.x2, bbox.y2)) {
-                            self.addSelectedNode(node);
-//                            self.selectedElements.push(node);
-//                            node.attr({stroke: self.NODE_FOCUSED_STROKE_COLOR});
-//                            node.text.attr({stroke: self.NODE_FOCUSED_STROKE_COLOR, "fill": self.NODE_FOCUSED_STROKE_COLOR});
+                            if (node.data("id") in self.selectedNodes) {
+                                self.removeSelectedNode(node);
+                            } else {
+                                self.addSelectedNode(node);
+                            }
                         }
                     }
                     self.selection = [];
@@ -246,7 +248,6 @@ function Memo() {
 //				clearTimeout(self.bottomScrollTimeout);
 //			}
 		} else if (self.dragView) {
-//            self.viewX += e.webkitMovementX;
             self.setView(self.currentZoom, self.viewX - e.webkitMovementX * self.currentZoom, self.viewY - e.webkitMovementY * self.currentZoom);
         }
     };
@@ -263,12 +264,6 @@ function Memo() {
     // keyboard
     window.onkeydown = function (e) {
         var result = true;
-//        var text = "";
-//        if (self.getFocusedNode()) {
-//            text = self.getFocusedNode().text.attr("text");
-//        } else if (self.getFocusedConnection()) {
-//            text = self.getFocusedConnection().text.attr("text");
-//        }
         switch (e.keyCode) {
             // backspace
             case 8:
@@ -298,18 +293,10 @@ function Memo() {
                     self.selectedRelationships[relId].text.attr({text: relText + "\n"});
                     self.serializableRelationships[relId].text = relText + "\n";
                 }
-//                if (self.focusedNode) {
-//                    self.focusedNode.text.attr({text: text + "\n"});
-//                    self.serializableNodes[self.focusedNode.data("id")].text = text + "\n";
-//                } else if (self.focusedConnection) {
-//                    self.focusedConnection.text.attr({text: text + "\n"});
-//                    self.serializableRelationships[self.focusedConnection.path.data("id")].text = text + "\n";
-//                }
                 break;
             // escape
             case 27:
                     self.clearSelection();
-//                    self.clearFocusedConnection();
                 break;
             // left arrow
             case 37:
@@ -337,13 +324,6 @@ function Memo() {
                     self.selectedRelationships[relId].text.attr({text: ""});
                     self.serializableRelationships[relId].text = "";
                 }
-//                if (self.focusedNode) {
-//                    self.focusedNode.text.attr({text: ""});
-//                    self.serializableNodes[self.focusedNode.data("id")].text = "";
-//                } else if (self.getFocusedConnection()) {
-//                    self.getFocusedConnection().text.attr({text: ""});
-//                    self.serializableRelationships[self.focusedConnection.path.data("id")].text = "";
-//                }
                 break;
         }
         for (var nodeId in self.selectedNodes) {
@@ -445,15 +425,11 @@ Memo.prototype.addNode = function (x, y, id, text) {
     var self = this;
     var moveNode = function (dx, dy, x, y, mouseEvent) {
         if (mouseEvent.button === self.DRAG_NODE_MOUSE_BUTTON) {
-            for (var nodeId in self.selectedNodes) {
-                var attr = {x: this.gripX + self.currentZoom * dx, y: this.gripY + self.currentZoom * dy};
-                this.attr(attr);
-                self.serializableNodes[this.data("id")].x = attr.x;
-                self.serializableNodes[this.data("id")].y = attr.y;
-                var textAttr = {x: this.gripX + this.attr("width") / 2 + self.currentZoom * dx, y: this.gripY + this.attr("height") / 2 + self.currentZoom * dy};
-                this.text.attr(textAttr);
-                for (var connectionId in self.relationships) {
-                    self.redrawConnection(self.relationships[connectionId]);
+            if (isEmpty(self.selectedNodes)) {
+                self.moveNode(this, dx, dy);
+            } else if (this.data("id") in self.selectedNodes) {
+                for (var nodeId in self.selectedNodes) {
+                    self.moveNode(self.selectedNodes[nodeId], dx, dy);
                 }
             }
         }
@@ -467,22 +443,35 @@ Memo.prototype.addNode = function (x, y, id, text) {
     };
     var gripNode = function (x, y, mouseEvent) {
         if (mouseEvent.button === self.DRAG_NODE_MOUSE_BUTTON) {
-            this.gripX = this.attr("x");
-            this.gripY = this.attr("y");
-            this.animate({"fill-opacity": .2}, 100);
+            var grippedNodes = {};
+            if (isEmpty(self.selectedNodes)) {
+                grippedNodes[this.data("id")] = this;
+            } else if (self.selectedNodes[this.data("id")] !== undefined) {
+                grippedNodes = self.selectedNodes;
+            }
+            self.gripNodes(grippedNodes);
         }
         self.clearLastGrippedNode();
     };
     var releaseNode = function (mouseEvent) {
         if (mouseEvent.button === self.DRAG_NODE_MOUSE_BUTTON) {
-            this.animate({"fill-opacity": 0}, 100);
+            var grippedNodes = {};
+            if (isEmpty(self.selectedNodes)) {
+                grippedNodes[this.data("id")] = this;
+            } else {
+                grippedNodes = self.selectedNodes;
+            }
+            self.releaseNodes(grippedNodes);
         }
     };
     node.drag(moveNode, gripNode, releaseNode);
     node.click(function () {
         if (self.getLastGrippedNode() !== this) {
-            self.addSelectedNode(this);
-//            self.selectedNodes[nodeId] = this;
+            if (self.selectedNodes[nodeId] === undefined) {
+                self.addSelectedNode(this);
+            } else {
+                self.removeSelectedNode(this);
+            }
         }
     });
     this.adjacencyMatrix[nodeId] = {};
@@ -496,9 +485,8 @@ Memo.prototype.addNode = function (x, y, id, text) {
     node.text.attr({stroke: this.NODE_STROKE_COLOR, fill: this.NODE_STROKE_COLOR, cursor: "move"});
     node.text.drag(moveNode, gripNode, releaseNode, node, node, node);
     node.text.click(function () {
-        self.selcetedNodes[nodeId] = node;
+        self.addSelectedNode(node);
     });
-//    this.selectedNodes[nodeId] = node;
     this.addSelectedNode(node);
     this.minX = Math.min(this.minX, node.attr("x"));
     this.minY = Math.min(this.minY, node.attr("y"));
@@ -542,23 +530,44 @@ Memo.prototype.clearNodes = function () {
     }
 };
 
+Memo.prototype.gripNodes = function(nodes) {
+    for (var nodeId in nodes) {
+        var node = nodes[nodeId];
+        node.gripX = node.attr("x");
+        node.gripY = node.attr("y");
+        node.animate({"fill-opacity": .2}, 100);
+    }
+}
+
+Memo.prototype.releaseNodes = function(nodes) {
+    for (var nodeId in nodes) {
+        nodes[nodeId].animate({"fill-opacity": 0}, 100);
+    }
+}
+
+Memo.prototype.moveNode = function(node, dx, dy) {
+    var attr = {x: node.gripX + this.currentZoom * dx, y: node.gripY + this.currentZoom * dy};
+    node.attr(attr);
+    this.serializableNodes[node.data("id")].x = attr.x;
+    this.serializableNodes[node.data("id")].y = attr.y;
+    var textAttr = {x: node.gripX + node.attr("width") / 2 + this.currentZoom * dx, y: node.gripY + node.attr("height") / 2 + this.currentZoom * dy};
+    node.text.attr(textAttr);
+    for (var connectionId in this.relationships) {
+        this.redrawConnection(this.relationships[connectionId]);
+    }
+}
+
 Memo.prototype.addSelectedNode = function (node) {
     this.selectedNodes[node.data("id")] = node;
     node.attr({stroke: this.NODE_FOCUSED_STROKE_COLOR});
     node.text.attr({stroke: this.NODE_FOCUSED_STROKE_COLOR, "fill": this.NODE_FOCUSED_STROKE_COLOR});
 };
 
-//Memo.prototype.setFocusedNode = function (node) {
-//    this.clearSelection();
-//    this.clearFocusedConnection();
-//    this.focusedNode = node;
-//    this.focusedNode.attr({stroke: this.NODE_FOCUSED_STROKE_COLOR});
-//    this.focusedNode.text.attr({stroke: this.NODE_FOCUSED_STROKE_COLOR, "fill": this.NODE_FOCUSED_STROKE_COLOR});
-//};
-
-//Memo.prototype.getFocusedNode = function () {
-//    return this.focusedNode;
-//};
+Memo.prototype.removeSelectedNode = function (node) {
+    delete this.selectedNodes[node.data("id")];
+    node.attr({stroke: this.NODE_STROKE_COLOR});
+    node.text.attr({stroke: this.NODE_STROKE_COLOR, "fill": this.NODE_STROKE_COLOR});
+};
 
 Memo.prototype.clearSelection = function () {
     for (var nodeId in this.selectedNodes) {
@@ -572,28 +581,6 @@ Memo.prototype.clearSelection = function () {
     }
     this.selectedRelationships = {};
 };
-
-//Memo.prototype.setFocusedConnection = function(connectionId) {
-//    this.clearSelection()
-//    this.clearFocusedConnection();
-//    this.focusedConnection = this.relationships[connectionId];
-//    this.focusedConnection.path.attr({stroke: this.NODE_FOCUSED_STROKE_COLOR});
-//    this.focusedConnection.endCircle.attr({stroke: this.NODE_FOCUSED_STROKE_COLOR, "fill": this.NODE_FOCUSED_STROKE_COLOR});
-//    this.focusedConnection.text.attr({stroke: this.NODE_FOCUSED_STROKE_COLOR, "fill": this.NODE_FOCUSED_STROKE_COLOR});
-//};
-
-//Memo.prototype.clearFocusedConnection = function() {
-//    if (this.focusedConnection) {
-//        this.focusedConnection.path.attr({stroke: this.CONNECTION_STROKE_COLOR});
-//        this.focusedConnection.endCircle.attr({stroke: this.CONNECTION_STROKE_COLOR, "fill": this.CONNECTION_STROKE_COLOR});
-//        this.focusedConnection.text.attr({stroke: this.CONNECTION_STROKE_COLOR, "fill": this.CONNECTION_STROKE_COLOR});
-//        this.focusedConnection = null;
-//    }
-//};
-
-//Memo.prototype.getFocusedConnection = function() {
-//    return this.focusedConnection;
-//};
 
 Memo.prototype.updateNodeSize = function (node) {
     var textBBox = node.text.getBBox();
