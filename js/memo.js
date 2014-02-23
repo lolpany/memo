@@ -117,18 +117,23 @@ function Memo() {
         var clickedElement = self.paper.getElementByPoint(x, y);
         switch (button) {
             case self.DRAG_NODE_MOUSE_BUTTON:
-                if (ctrlKey) {
-                    if (clickedElement) {
-                        if (self.selectedNodes[clickedElement.data("id")]) {
-                            self.removeSelectedNode(clickedElement);
-                        } else {
-                            self.addSelectedNode(clickedElement);
-                        }
-                    } else {
-                        self.ctrlPressedOnMouseDown = true;
-                        self.selection.push({x: x, y: y});
+                if (ctrlKey && clickedElement) {
+                    if (clickedElement.node instanceof SVGRectElement) {
+                        self.addSelectedNode(clickedElement);
+                    } else if (clickedElement.node instanceof SVGPathElement) {
+                        self.addSelectedRelationship(self.relationships[clickedElement.data("id")]);
                     }
-                } else if (!clickedElement) {
+                } else if (ctrlKey && !clickedElement) {
+                    self.ctrlPressedOnMouseDown = true;
+                    self.selection.push({x: x, y: y});
+                } else if (!ctrlKey && clickedElement) {
+                    self.clearSelection();
+                    if (clickedElement.node instanceof SVGRectElement) {
+                        self.addSelectedNode(clickedElement);
+                    } else if (clickedElement.node instanceof SVGPathElement) {
+                        self.addSelectedRelationship(self.relationships[clickedElement.data("id")]);
+                    }
+                } else if (!ctrlKey && !clickedElement) {
                     self.clearSelection();
                     self.dragView = true;
                 }
@@ -465,15 +470,6 @@ Memo.prototype.addNode = function (x, y, id, text) {
         }
     };
     node.drag(moveNode, gripNode, releaseNode);
-    node.click(function () {
-        if (self.getLastGrippedNode() !== this) {
-            if (self.selectedNodes[nodeId] === undefined) {
-                self.addSelectedNode(this);
-            } else {
-                self.removeSelectedNode(this);
-            }
-        }
-    });
     this.adjacencyMatrix[nodeId] = {};
     var nodeText = text;
     if (!nodeText) {
@@ -563,6 +559,13 @@ Memo.prototype.addSelectedNode = function (node) {
     node.text.attr({stroke: this.NODE_FOCUSED_STROKE_COLOR, "fill": this.NODE_FOCUSED_STROKE_COLOR});
 };
 
+Memo.prototype.addSelectedRelationship = function (rel) {
+    this.selectedRelationships[rel.path.data("id")] = rel;
+    rel.path.attr({stroke: this.NODE_FOCUSED_STROKE_COLOR});
+    rel.endCircle.attr({stroke: this.NODE_FOCUSED_STROKE_COLOR, "fill": this.NODE_FOCUSED_STROKE_COLOR});
+    rel.text.attr({stroke: this.NODE_FOCUSED_STROKE_COLOR, "fill": this.NODE_FOCUSED_STROKE_COLOR});
+};
+
 Memo.prototype.removeSelectedNode = function (node) {
     delete this.selectedNodes[node.data("id")];
     node.attr({stroke: this.NODE_STROKE_COLOR});
@@ -576,8 +579,9 @@ Memo.prototype.clearSelection = function () {
     }
     this.selectedNodes = {};
     for (var relId in this.selectedRelationships) {
-        this.selectedRelationships[relId].attr({stroke: this.NODE_STROKE_COLOR});
-        this.selectedRelationships[relId].text.attr({stroke: this.NODE_STROKE_COLOR, "fill": this.NODE_STROKE_COLOR});
+        this.selectedRelationships[relId].path.attr({stroke: this.CONNECTION_STROKE_COLOR});
+        this.selectedRelationships[relId].endCircle.attr({stroke: this.CONNECTION_STROKE_COLOR, fill: this.CONNECTION_STROKE_COLOR});
+        this.selectedRelationships[relId].text.attr({stroke: this.CONNECTION_STROKE_COLOR, "fill": this.CONNECTION_STROKE_COLOR});
     }
     this.selectedRelationships = {};
 };
