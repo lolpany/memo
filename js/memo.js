@@ -15,6 +15,7 @@ function Memo() {
     // frame rate
 	this.FRAME_RATE = 60;
     // pan
+    //
     this.PAN_KEYBOARD_STEP = 100;
 	this.PAN_SPEED = 600;
 	this.PAN_ZONE_PART = 0.2;
