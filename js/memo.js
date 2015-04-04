@@ -21,6 +21,7 @@ function Memo() {
 	this.PAN_ZONE_PART = 0.2;
 	this.MARGIN = 100;
     // zoom
+    //
     this.ZOOM_KEYBOARD_FACTOR = 1.2;
     this.ZOOM_MOUSE_FACTOR = 1.2 * 1 / 120;
     this.ZOOM_TIME = 100;
