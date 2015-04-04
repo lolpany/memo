@@ -3,6 +3,7 @@
  */
 function Memo() {
     /*
+    lolo
      *  constants
      */
     // debug mode
