@@ -256,7 +256,7 @@ function Memo() {
 //				clearTimeout(self.bottomScrollTimeout);
 //			}
 		} else if (self.dragView) {
-            self.setView(self.currentZoom, self.viewX - e.webkitMovementX * self.currentZoom, self.viewY - e.webkitMovementY * self.currentZoom);
+            self.setView(self.currentZoom, self.viewX - e.movementX * self.currentZoom, self.viewY - e.movementY * self.currentZoom);
         }
     };
     window.document.onmouseout = function () {
