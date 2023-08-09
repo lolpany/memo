@@ -370,9 +370,9 @@ function Memo() {
                         serializableNodes: self.serializableNodes,
                         serializableRelationships: self.serializableRelationships
                     });
-                    var uriContent = "data:application/json;filename=filename.json," + mem;
+                    var file = new Blob([mem], {type: 'data:application/json'});
                     var downloadLink = document.createElement("a");
-                    downloadLink.href = uriContent;
+                    downloadLink.href = URL.createObjectURL(file);
                     downloadLink.download = "mem.json";
                     downloadLink.click();
                     break;

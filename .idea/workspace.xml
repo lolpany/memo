@@ -4,8 +4,7 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="fb3d8a68-d948-4509-ba20-4a7c8b951eb9" name="Default" comment="">
-      <change beforePath="$PROJECT_DIR$/.idea/misc.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/misc.xml" afterDir="false" />
+    <list default="true" id="fb3d8a68-d948-4509-ba20-4a7c8b951eb9" name="Default" comment="fix mouse pan">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/js/memo.js" beforeDir="false" afterPath="$PROJECT_DIR$/js/memo.js" afterDir="false" />
     </list>
@@ -62,14 +61,14 @@
     <option name="hideEmptyMiddlePackages" value="true" />
     <option name="showLibraryContents" value="true" />
   </component>
-  <component name="PropertiesComponent"><![CDATA[{
-  "keyToString": {
-    "RunOnceActivity.ShowReadmeOnStart": "true",
-    "git-widget-placeholder": "master",
-    "ignore.virus.scanning.warn.message": "true",
-    "last_opened_file_path": "C:/all/projects/ormik"
+  <component name="PropertiesComponent">{
+  &quot;keyToString&quot;: {
+    &quot;RunOnceActivity.ShowReadmeOnStart&quot;: &quot;true&quot;,
+    &quot;git-widget-placeholder&quot;: &quot;master&quot;,
+    &quot;ignore.virus.scanning.warn.message&quot;: &quot;true&quot;,
+    &quot;last_opened_file_path&quot;: &quot;C:/all/projects/ormik&quot;
   }
-}]]></component>
+}</component>
   <component name="RunManager">
     <configuration default="true" type="Applet" factoryName="Applet">
       <module name="" />
@@ -126,6 +125,14 @@
       <updated>1422707491592</updated>
       <workItem from="1422707494158" duration="864000" />
     </task>
+    <task id="LOCAL-00001" summary="fix mouse pan">
+      <created>1689267430776</created>
+      <option name="number" value="00001" />
+      <option name="presentableId" value="LOCAL-00001" />
+      <option name="project" value="LOCAL" />
+      <updated>1689267430776</updated>
+    </task>
+    <option name="localTasksCounter" value="2" />
     <servers />
   </component>
   <component name="TimeTrackingManager">
@@ -182,7 +189,8 @@
       <collection />
     </option>
   </component>
-  <component name="VcsContentAnnotationSettings">
-    <option name="myLimit" value="2678400000" />
+  <component name="VcsManagerConfiguration">
+    <MESSAGE value="fix mouse pan" />
+    <option name="LAST_COMMIT_MESSAGE" value="fix mouse pan" />
   </component>
 </project>
